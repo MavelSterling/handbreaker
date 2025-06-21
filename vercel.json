@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "breaker_game.html",
+      "src": "public/**",
       "use": "@vercel/static"
     },
     {
@@ -17,9 +17,8 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/breaker_game.html"
+      "dest": "/public/$1"
     }
   ],
-  "outputDirectory": ".",
-  "public": true
+  "outputDirectory": "public"
 } 

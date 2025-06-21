@@ -46,3 +46,20 @@ To test the game on your computer, follow these steps:
    Open your browser and go to `http://localhost:3000`.
 
 That's it! You can now play.
+
+## 📁 Project Structure
+
+```
+handbreaker/
+├── public/           # Static files served by Vercel
+│   ├── breaker_game.html
+│   ├── manifest.json
+│   ├── paddle.png
+│   ├── ladrillo.png
+│   ├── corazon.png
+│   └── esfera.png
+├── api/              # Serverless functions
+│   └── server.js
+├── vercel.json       # Vercel configuration
+└── package.json
+```
