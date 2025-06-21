@@ -159,16 +159,34 @@
 
       // Control con mouse/táctil - movido aquí para asegurar que canvas existe
       canvas.addEventListener('mousemove', function(e) {
+        console.log('Mouse move detected:', e.clientX, e.clientY);
         if (gameState === 'playing') {
           const rect = canvas.getBoundingClientRect();
           const mouseX = e.clientX - rect.left;
+          console.log('Canvas rect:', rect.left, rect.top, rect.width, rect.height);
+          console.log('Mouse position relative to canvas:', mouseX);
           paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, mouseX - paddle.width / 2));
+          console.log('Paddle moved to:', paddle.x);
           touchControl = true;
         }
       });
 
+      canvas.addEventListener('mousedown', function(e) {
+        console.log('Mouse down detected');
+      });
+
+      canvas.addEventListener('click', function(e) {
+        console.log('Canvas clicked');
+      });
+
+      canvas.addEventListener('mouseleave', function(e) {
+        console.log('Mouse left canvas');
+        // No resetear touchControl aquí para permitir que el control de mano tome el relevo
+      });
+
       canvas.addEventListener('touchmove', function(e) {
         e.preventDefault();
+        console.log('Touch move detected');
         if (gameState === 'playing') {
           const rect = canvas.getBoundingClientRect();
           const touchX = e.touches[0].clientX - rect.left;
@@ -185,10 +203,19 @@
       console.log('Handling resize...');
       console.log('Canvas offset dimensions:', canvas.offsetWidth, 'x', canvas.offsetHeight);
       
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetWidth * (600 / 800);
+      // Detectar si es PC o móvil
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      console.log('Device type:', isMobile ? 'Mobile' : 'Desktop');
+      
+      // Para PC, limitar el tamaño máximo del canvas
+      const maxWidth = isMobile ? 800 : 600;
+      const maxHeight = isMobile ? 600 : 450;
+      
+      canvas.width = Math.min(canvas.offsetWidth, maxWidth);
+      canvas.height = Math.min(canvas.offsetWidth * (600 / 800), maxHeight);
       
       console.log('Canvas actual dimensions:', canvas.width, 'x', canvas.height);
+      console.log('Window dimensions:', window.innerWidth, 'x', window.innerHeight);
 
       if (gameState === 'playing') {
         initializeGame();
@@ -293,7 +320,7 @@
     function onResults(results) {
       if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         lastLandmarks = results.multiHandLandmarks[0];
-        if (gameState === 'playing') {
+        if (gameState === 'playing' && !touchControl) {
           const handX = (1 - lastLandmarks[8].x) * canvas.width;
           paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, handX - paddle.width / 2));
         }
@@ -325,7 +352,7 @@
       // Asegurar que el canvas esté correctamente dimensionado
       setTimeout(() => {
         handleResize();
-        initializeGame();
+      initializeGame();
       }, 100);
     }
 
@@ -606,6 +633,10 @@
         for (let i = 0; i < lives; i++) {
           ctx.drawImage(heartImage, canvas.width - (i + 1) * (heartSize + 5) - 10, canvas.height - heartSize - 10, heartSize, heartSize);
         }
+        
+        // Mostrar indicador de control activo
+        ctx.fillStyle = touchControl ? "#00ff00" : "#ffff00";
+        ctx.fillText(touchControl ? "Mouse/Touch" : "Hand Tracking", 10, 30);
       }
 
       if (lastLandmarks) {
