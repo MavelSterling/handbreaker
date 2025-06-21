@@ -1,48 +1,48 @@
-# 🚀 Jue - Rompe Bloques
+# 🚀 Block Breaker Game
 
-## 🎮 ¿Cómo se Juega?
+## 🎮 How to Play?
 
-El objetivo es simple: ¡rompe todos los ladrillos de la pantalla sin que la pelota se te escape!
+The objective is simple: break all the bricks on the screen without letting the ball escape!
 
-### **Controles**
+### **Controls**
 
-El juego te ofrece tres formas de controlar la paleta:
+The game offers you three ways to control the paddle:
 
-1. 🖐️ **Con la Mano:** Activa tu cámara y usa tu mano para mover la paleta. ¡El juego seguirá tus gestos! (Requiere permisos de cámara).
-2. 🖱️ **Con el Ratón:** En un ordenador, simplemente mueve el ratón para controlar la paleta.
-3. 👆 **Táctil:** En móviles y tablets, desliza tu dedo por la pantalla para mover la paleta.
+1. 🖐️ **With Your Hand:** Activate your camera and use your hand to move the paddle. The game will follow your gestures! (Requires camera permissions).
+2. 🖱️ **With the Mouse:** On a computer, simply move the mouse to control the paddle.
+3. 👆 **Touch:** On mobile devices and tablets, slide your finger across the screen to move the paddle.
 
-### **Niveles de Dificultad**
+### **Difficulty Levels**
 
-Elige tu desafío antes de empezar:
+Choose your challenge before starting:
 
-- **Fácil:** La pelota se mueve a una velocidad lenta y constante. Ideal para principiantes.
-- **Medio:** La pelota tiene una velocidad normal y constante. El reto estándar.
-- **Difícil:** ¡El verdadero desafío! La pelota empieza lenta, pero su velocidad aumenta un poco más con cada ladrillo que rompes.
+- **Easy:** The ball moves at a slow and constant speed. Ideal for beginners.
+- **Medium:** The ball has normal and constant speed. The standard challenge.
+- **Hard:** The real challenge! The ball starts slow, but its speed increases a bit more with each brick you break.
 
-### **Vidas**
+### **Lives**
 
-Tienes 3 vidas (❤️) para completar cada nivel. Si la pelota cae por debajo de la paleta, pierdes una vida. ¡Si pierdes las tres, se acaba el juego!
+You have 3 lives (❤️) to complete each level. If the ball falls below the paddle, you lose a life. If you lose all three, the game is over!
 
 ---
 
-## 🚀 Ejecución Local
+## 🚀 Local Execution
 
-Para probar el juego en tu ordenador, sigue estos pasos:
+To test the game on your computer, follow these steps:
 
-1. **Instala las dependencias:**
-   Abre una terminal en la carpeta del proyecto y ejecuta:
+1. **Install dependencies:**
+   Open a terminal in the project folder and run:
 
    ```bash
    npm install
    ```
-2. **Inicia el servidor:**
-   Una vez instaladas las dependencias, ejecuta:
+2. **Start the server:**
+   Once the dependencies are installed, run:
 
    ```bash
    npm start
    ```
-3. **Abre el juego:**
-   Abre tu navegador y ve a `http://localhost:3000`.
+3. **Open the game:**
+   Open your browser and go to `http://localhost:3000`.
 
-¡Y listo! Ya puedes jugar.
+That's it! You can now play.
