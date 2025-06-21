@@ -135,14 +135,49 @@
 
     // Inicialización
     window.onload = function() {
+      console.log('Window loaded, initializing game...');
+      
       canvas = document.getElementById('gameCanvas');
+      if (!canvas) {
+        console.error('Canvas element not found!');
+        return;
+      }
+      
       ctx = canvas.getContext('2d');
+      if (!ctx) {
+        console.error('Could not get 2D context from canvas!');
+        return;
+      }
+      
+      console.log('Canvas initialized successfully');
+      
       loadAssets();
       setupHandTracking();
       
       window.addEventListener('resize', handleResize);
       handleResize();
 
+      // Control con mouse/táctil - movido aquí para asegurar que canvas existe
+      canvas.addEventListener('mousemove', function(e) {
+        if (gameState === 'playing') {
+          const rect = canvas.getBoundingClientRect();
+          const mouseX = e.clientX - rect.left;
+          paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, mouseX - paddle.width / 2));
+          touchControl = true;
+        }
+      });
+
+      canvas.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+        if (gameState === 'playing') {
+          const rect = canvas.getBoundingClientRect();
+          const touchX = e.touches[0].clientX - rect.left;
+          paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, touchX - paddle.width / 2));
+          touchControl = true;
+        }
+      });
+
+      console.log('Starting game loop...');
       gameLoop();
     };
 
@@ -162,46 +197,92 @@
       ballImage = new Image();
       heartImage = new Image();
 
-      blockImage.onload = paddleImage.onload = ballImage.onload = heartImage.onload = function() {
-        assetsLoaded = true;
-      };
+      let loadedCount = 0;
+      const totalImages = 4;
 
+      function checkAllLoaded() {
+        loadedCount++;
+        if (loadedCount === totalImages) {
+          assetsLoaded = true;
+          console.log('All assets loaded successfully');
+        }
+      }
+
+      function handleImageError(imageName, error) {
+        console.error(`Error loading ${imageName}:`, error);
+        // Crear una imagen de fallback
+        const fallbackCanvas = document.createElement('canvas');
+        fallbackCanvas.width = 100;
+        fallbackCanvas.height = 50;
+        const fallbackCtx = fallbackCanvas.getContext('2d');
+        fallbackCtx.fillStyle = '#ff0000';
+        fallbackCtx.fillRect(0, 0, 100, 50);
+        fallbackCtx.fillStyle = '#ffffff';
+        fallbackCtx.font = '12px Arial';
+        fallbackCtx.fillText(imageName, 10, 30);
+        
+        const fallbackImage = new Image();
+        fallbackImage.onload = checkAllLoaded;
+        fallbackImage.src = fallbackCanvas.toDataURL();
+        
+        return fallbackImage;
+      }
+
+      blockImage.onload = checkAllLoaded;
+      blockImage.onerror = () => blockImage = handleImageError('ladrillo.png', 'Failed to load');
       blockImage.src = 'ladrillo.png';
+
+      paddleImage.onload = checkAllLoaded;
+      paddleImage.onerror = () => paddleImage = handleImageError('paddle.png', 'Failed to load');
       paddleImage.src = 'paddle.png';
+
+      ballImage.onload = checkAllLoaded;
+      ballImage.onerror = () => ballImage = handleImageError('esfera.png', 'Failed to load');
       ballImage.src = 'esfera.png';
+
+      heartImage.onload = checkAllLoaded;
+      heartImage.onerror = () => heartImage = handleImageError('corazon.png', 'Failed to load');
       heartImage.src = 'corazon.png';
     }
 
     // Configurar detección de manos
     function setupHandTracking() {
-      const hands = new Hands({
-        locateFile: (file) => {
-          return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-        }
-      });
-
-      hands.setOptions({
-        maxNumHands: 1,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-      });
-
-      hands.onResults(onResults);
-
-      // Configurar cámara
-      videoElement = document.createElement('video');
-      const camera = new Camera(videoElement, {
-        onFrame: async () => {
-          if (videoElement && videoElement.readyState >= 3) {
-            await hands.send({ image: videoElement });
+      console.log('Setting up hand tracking...');
+      
+      try {
+        const hands = new Hands({
+          locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
           }
-        },
-        width: 640,
-        height: 480
-      });
+        });
 
-      camera.start();
+        hands.setOptions({
+          maxNumHands: 1,
+          modelComplexity: 1,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onResults);
+
+        // Configurar cámara
+        videoElement = document.createElement('video');
+        const camera = new Camera(videoElement, {
+          onFrame: async () => {
+            if (videoElement && videoElement.readyState >= 3) {
+              await hands.send({ image: videoElement });
+            }
+          },
+          width: 640,
+          height: 480
+        });
+
+        console.log('Starting camera...');
+        camera.start();
+        console.log('Hand tracking setup completed');
+      } catch (error) {
+        console.error('Error setting up hand tracking:', error);
+      }
     }
 
     function onResults(results) {
@@ -439,26 +520,6 @@
       document.getElementById('gameOverText').textContent = '¡Victoria!';
       document.getElementById('finalScore').textContent = `Puntuación final: ${score}`;
     }
-
-    // Control con mouse/táctil
-    canvas.addEventListener('mousemove', function(e) {
-      if (gameState === 'playing') {
-        const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, mouseX - paddle.width / 2));
-        touchControl = true;
-      }
-    });
-
-    canvas.addEventListener('touchmove', function(e) {
-      e.preventDefault();
-      if (gameState === 'playing') {
-        const rect = canvas.getBoundingClientRect();
-        const touchX = e.touches[0].clientX - rect.left;
-        paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, touchX - paddle.width / 2));
-        touchControl = true;
-      }
-    });
 
     // Bucle del juego
     function gameLoop() {
