@@ -336,6 +336,7 @@
 
     // Inicializar juego
     function initializeGame() {
+      console.log('Initializing game...');
       score = 0;
       lives = 3;
       
@@ -353,9 +354,17 @@
 
         paddle.height = baseHeight * scale;
         paddle.width = paddle.height * aspectRatio;
+        console.log('Paddle configured:', paddle.width, 'x', paddle.height);
+      } else {
+        // Fallback si la imagen no está cargada
+        paddle.width = 100;
+        paddle.height = 20;
+        console.log('Using fallback paddle size:', paddle.width, 'x', paddle.height);
       }
+      
       paddle.x = (canvas.width - paddle.width) / 2;
       paddle.y = canvas.height - paddle.height - 20;
+      console.log('Paddle position:', paddle.x, paddle.y);
 
       // Configurar pelota
       resetBall();
@@ -381,6 +390,7 @@
         }
       }
 
+      console.log('Game initialized with', blocks.length, 'blocks');
       lastLandmarks = null;
     }
 
@@ -401,6 +411,7 @@
       }
       ball.dx = speed;
       ball.dy = -speed;
+      console.log('Ball reset to:', ball.x, ball.y, 'with speed:', ball.dx, ball.dy);
     }
 
     function resetGameState() {
@@ -417,6 +428,13 @@
       // Mover pelota
       ball.x += ball.dx;
       ball.y += ball.dy;
+
+      // Debug: verificar si la pelota está en una posición válida
+      if (isNaN(ball.x) || isNaN(ball.y)) {
+        console.error('Ball position is NaN:', ball.x, ball.y);
+        resetBall();
+        return;
+      }
 
       // Colisión con paredes
       if (ball.x <= ball.radius) {
@@ -453,10 +471,13 @@
 
       // Pelota se sale por abajo
       if (ball.y >= canvas.height) {
+        console.log('Ball fell below canvas. Lives remaining:', lives - 1);
         lives--;
         if (lives <= 0) {
+          console.log('Game Over - no lives remaining');
           gameOver();
         } else {
+          console.log('Resetting ball, lives remaining:', lives);
           resetBall();
         }
       }
