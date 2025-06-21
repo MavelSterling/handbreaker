@@ -182,8 +182,13 @@
     };
 
     function handleResize() {
+      console.log('Handling resize...');
+      console.log('Canvas offset dimensions:', canvas.offsetWidth, 'x', canvas.offsetHeight);
+      
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetWidth * (600 / 800);
+      
+      console.log('Canvas actual dimensions:', canvas.width, 'x', canvas.height);
 
       if (gameState === 'playing') {
         initializeGame();
@@ -312,10 +317,16 @@
     }
 
     function startGame() {
+      console.log('Starting game...');
       document.getElementById('instructions').style.display = 'none';
       document.getElementById('gameArea').style.display = 'block';
       gameState = 'playing';
-      initializeGame();
+      
+      // Asegurar que el canvas esté correctamente dimensionado
+      setTimeout(() => {
+        handleResize();
+        initializeGame();
+      }, 100);
     }
 
     function backToMenu() {
@@ -365,6 +376,14 @@
       paddle.x = (canvas.width - paddle.width) / 2;
       paddle.y = canvas.height - paddle.height - 20;
       console.log('Paddle position:', paddle.x, paddle.y);
+      
+      // Verificar que la paleta esté dentro del canvas
+      if (paddle.x < 0 || paddle.y < 0 || paddle.x + paddle.width > canvas.width || paddle.y + paddle.height > canvas.height) {
+        console.error('Paddle position invalid, adjusting...');
+        paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, paddle.x));
+        paddle.y = Math.max(0, Math.min(canvas.height - paddle.height, paddle.y));
+        console.log('Adjusted paddle position:', paddle.x, paddle.y);
+      }
 
       // Configurar pelota
       resetBall();
@@ -412,6 +431,14 @@
       ball.dx = speed;
       ball.dy = -speed;
       console.log('Ball reset to:', ball.x, ball.y, 'with speed:', ball.dx, ball.dy);
+      
+      // Verificar que la pelota esté en una posición válida
+      if (ball.x < ball.radius || ball.x > canvas.width - ball.radius || ball.y < ball.radius || ball.y > canvas.height - ball.radius) {
+        console.error('Ball position invalid, adjusting...');
+        ball.x = Math.max(ball.radius, Math.min(canvas.width - ball.radius, ball.x));
+        ball.y = Math.max(ball.radius, Math.min(canvas.height - ball.radius, ball.y));
+        console.log('Adjusted ball position:', ball.x, ball.y);
+      }
     }
 
     function resetGameState() {
