@@ -435,7 +435,7 @@
           speed = 4; // Velocidad normal
           break;
         case 'hard':
-          speed = 2; // Inicia muy lento
+          speed = 5; // Inicia más rápido 
           break;
       }
       ball.dx = speed;
@@ -536,7 +536,7 @@
 
           if (difficulty === 'hard') {
             const currentSpeed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
-            const speedRatio = (currentSpeed + 0.05) / currentSpeed;
+            const speedRatio = (currentSpeed + 0.15) / currentSpeed;
             ball.dx *= speedRatio;
             ball.dy *= speedRatio;
           }
