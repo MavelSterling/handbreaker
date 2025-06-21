@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rompe Bloques - Mejorado</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      font-family: 'Arial', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .game-container {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      width: 95vw;
+      max-width: 840px;
+    }
+    canvas {
+      border: 3px solid #fff;
+      border-radius: 10px;
+      width: 100%;
+      display: block;
+    }
+    .button {
+      background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      margin: 5px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: transform 0.2s, box-shadow 0.3s;
+    }
+    .button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    }
+    .difficulty-buttons button {
+      margin: 0 5px;
+      background: linear-gradient(45deg, #2ecc71, #27ae60);
+    }
+    .medium { background: linear-gradient(45deg, #3498db, #2980b9); }
+    .hard { background: linear-gradient(45deg, #e74c3c, #c0392b); }
+    .instructions, .difficulty-select, .game-over {
+      color: white;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.5em;
+      }
+      .button {
+        padding: 10px 18px;
+        font-size: 0.9em;
+      }
+      .game-container {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1 style="color: white;">Rompe Bloques</h1>
+    <div id="menu">
+      <button class="button" onclick="goToDifficulty()">Iniciar Juego</button>
+    </div>
+
+    <div id="difficulty" class="difficulty-select">
+      <h3>Selecciona la dificultad</h3>
+      <button class="button" onclick="selectDifficulty('easy')">Fácil</button>
+      <button class="button medium" onclick="selectDifficulty('medium')">Medio</button>
+      <button class="button hard" onclick="selectDifficulty('hard')">Difícil</button>
+    </div>
+
+    <div id="instructions" class="instructions">
+      <h3>¿Cómo jugar?</h3>
+      <p>• Mueve tu mano o usa el mouse/táctil para controlar la paleta</p>
+      <p>• Rompe todos los bloques sin perder las 3 vidas</p>
+      <button class="button" onclick="startGame()">¡Entendido!</button>
+    </div>
+
+    <div id="gameArea" style="display:none">
+      <canvas id="gameCanvas"></canvas>
+      <br>
+      <button class="button" onclick="resetGame()">Reiniciar</button>
+      <button class="button" onclick="backToMenu()">Menú</button>
+    </div>
+
+    <div id="gameOver" class="game-over">
+      <h2 id="gameOverText"></h2>
+      <p id="finalScore"></p>
+      <button class="button" onclick="resetGame()">Jugar de Nuevo</button>
+      <button class="button" onclick="backToMenu()">Menú Principal</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script>
+    const { drawConnectors, drawLandmarks, HAND_CONNECTIONS } = window;
+
+    // Variables globales del juego
+    let canvas, ctx;
+    let gameState = 'menu'; // menu, difficulty, instructions, playing, gameOver, victory
+    let difficulty = 'easy';
+    let score = 0;
+    let lives = 3;
+    let blocks = [];
+    let paddle = { x: 0, y: 0, width: 0, height: 0 };
+    let ball = { x: 0, y: 0, radius: 15, dx: 0, dy: 0 };
+    let assetsLoaded = false;
+    let blockImage, paddleImage, ballImage, heartImage;
+    let videoElement;
+    let lastLandmarks = null;
+    let touchControl = false;
+
+    // Inicialización
+    window.onload = function() {
+      canvas = document.getElementById('gameCanvas');
+      ctx = canvas.getContext('2d');
+      loadAssets();
+      setupHandTracking();
+      
+      window.addEventListener('resize', handleResize);
+      handleResize();
+
+      gameLoop();
+    };
+
+    function handleResize() {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetWidth * (600 / 800);
+
+      if (gameState === 'playing') {
+        initializeGame();
+      }
+    }
+
+    // Cargar imágenes
+    function loadAssets() {
+      blockImage = new Image();
+      paddleImage = new Image();
+      ballImage = new Image();
+      heartImage = new Image();
+
+      blockImage.onload = paddleImage.onload = ballImage.onload = heartImage.onload = function() {
+        assetsLoaded = true;
+      };
+
+      blockImage.src = 'ladrillo.png';
+      paddleImage.src = 'paddle.png';
+      ballImage.src = 'esfera.png';
+      heartImage.src = 'corazon.png';
+    }
+
+    // Configurar detección de manos
+    function setupHandTracking() {
+      const hands = new Hands({
+        locateFile: (file) => {
+          return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+        }
+      });
+
+      hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+      });
+
+      hands.onResults(onResults);
+
+      // Configurar cámara
+      videoElement = document.createElement('video');
+      const camera = new Camera(videoElement, {
+        onFrame: async () => {
+          if (videoElement && videoElement.readyState >= 3) {
+            await hands.send({ image: videoElement });
+          }
+        },
+        width: 640,
+        height: 480
+      });
+
+      camera.start();
+    }
+
+    function onResults(results) {
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        lastLandmarks = results.multiHandLandmarks[0];
+        if (gameState === 'playing') {
+          const handX = (1 - lastLandmarks[8].x) * canvas.width;
+          paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, handX - paddle.width / 2));
+        }
+      } else {
+        lastLandmarks = null;
+      }
+    }
+
+    // Funciones de navegación
+    function goToDifficulty() {
+      document.getElementById('menu').style.display = 'none';
+      document.getElementById('difficulty').style.display = 'block';
+      gameState = 'difficulty';
+    }
+
+    function selectDifficulty(selectedDifficulty) {
+      difficulty = selectedDifficulty;
+      document.getElementById('difficulty').style.display = 'none';
+      document.getElementById('instructions').style.display = 'block';
+      gameState = 'instructions';
+    }
+
+    function startGame() {
+      document.getElementById('instructions').style.display = 'none';
+      document.getElementById('gameArea').style.display = 'block';
+      gameState = 'playing';
+      initializeGame();
+    }
+
+    function backToMenu() {
+      document.getElementById('gameArea').style.display = 'none';
+      document.getElementById('gameOver').style.display = 'none';
+      document.getElementById('menu').style.display = 'block';
+      gameState = 'menu';
+      resetGameState();
+    }
+
+    function resetGame() {
+      if (gameState === 'playing') {
+        initializeGame();
+      } else {
+        startGame();
+      }
+    }
+
+    // Inicializar juego
+    function initializeGame() {
+      score = 0;
+      lives = 3;
+      
+      // Configurar paleta
+      if (paddleImage.naturalWidth > 0) {
+        const aspectRatio = paddleImage.naturalWidth / paddleImage.naturalHeight;
+        const baseHeight = 70;
+
+        let scale = 1.0; // Medium
+        if (difficulty === 'easy') {
+          scale = 1.2;
+        } else if (difficulty === 'hard') {
+          scale = 0.8;
+        }
+
+        paddle.height = baseHeight * scale;
+        paddle.width = paddle.height * aspectRatio;
+      }
+      paddle.x = (canvas.width - paddle.width) / 2;
+      paddle.y = canvas.height - paddle.height - 20;
+
+      // Configurar pelota
+      resetBall();
+
+      // Configurar bloques
+      blocks = [];
+      const rows = difficulty === 'easy' ? 3 : difficulty === 'medium' ? 4 : 5;
+      const cols = 7;
+      const blockWidth = 90;
+      const blockHeight = 25;
+      const blockPadding = 10;
+      const offsetTop = 50;
+      const offsetLeft = (canvas.width - (cols * (blockWidth + blockPadding) - blockPadding)) / 2;
+
+      for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
+          blocks.push({
+            x: offsetLeft + j * (blockWidth + blockPadding),
+            y: offsetTop + i * (blockHeight + blockPadding),
+            width: blockWidth,
+            height: blockHeight
+          });
+        }
+      }
+
+      lastLandmarks = null;
+    }
+
+    function resetBall() {
+      ball.x = paddle.x + paddle.width / 2;
+      ball.y = paddle.y - ball.radius;
+      let speed;
+      switch (difficulty) {
+        case 'easy':
+          speed = 2; // Muy lenta
+          break;
+        case 'medium':
+          speed = 4; // Velocidad normal
+          break;
+        case 'hard':
+          speed = 2; // Inicia muy lento
+          break;
+      }
+      ball.dx = speed;
+      ball.dy = -speed;
+    }
+
+    function resetGameState() {
+      score = 0;
+      lives = 3;
+      blocks = [];
+      lastLandmarks = null;
+    }
+
+    // Lógica del juego
+    function updateGame() {
+      if (gameState !== 'playing') return;
+
+      // Mover pelota
+      ball.x += ball.dx;
+      ball.y += ball.dy;
+
+      // Colisión con paredes
+      if (ball.x <= ball.radius) {
+        ball.dx = -ball.dx;
+        ball.x = ball.radius;
+      }
+      if (ball.x >= canvas.width - ball.radius) {
+        ball.dx = -ball.dx;
+        ball.x = canvas.width - ball.radius;
+      }
+      if (ball.y <= ball.radius) {
+        ball.dy = -ball.dy;
+        ball.y = ball.radius;
+      }
+
+      // Colisión con paleta
+      if (ball.y + ball.radius > paddle.y && 
+          ball.y - ball.radius < paddle.y + paddle.height &&
+          ball.x + ball.radius > paddle.x &&
+          ball.x - ball.radius < paddle.x + paddle.width) {
+        
+        const currentSpeed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+        
+        let collidePoint = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+        collidePoint = Math.max(-1, Math.min(1, collidePoint));
+        
+        const angle = collidePoint * (Math.PI / 2.4); // Max bounce angle: 75 degrees
+        
+        ball.dx = currentSpeed * Math.sin(angle);
+        ball.dy = -currentSpeed * Math.cos(angle);
+
+        ball.y = paddle.y - ball.radius;
+      }
+
+      // Pelota se sale por abajo
+      if (ball.y >= canvas.height) {
+        lives--;
+        if (lives <= 0) {
+          gameOver();
+        } else {
+          resetBall();
+        }
+      }
+
+      // Colisión con bloques
+      for (let i = blocks.length - 1; i >= 0; i--) {
+        const block = blocks[i];
+        
+        // Detección de colisión más precisa (Círculo vs. Rectángulo)
+        const closestX = Math.max(block.x, Math.min(ball.x, block.x + block.width));
+        const closestY = Math.max(block.y, Math.min(ball.y, block.y + block.height));
+        const distanceX = ball.x - closestX;
+        const distanceY = ball.y - closestY;
+        const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+
+        if (distanceSquared < (ball.radius * ball.radius)) {
+          blocks.splice(i, 1);
+          score += 10;
+
+          if (difficulty === 'hard') {
+            const currentSpeed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+            const speedRatio = (currentSpeed + 0.05) / currentSpeed;
+            ball.dx *= speedRatio;
+            ball.dy *= speedRatio;
+          }
+
+          // Lógica de rebote mejorada
+          const overlapX1 = (block.x + block.width) - (ball.x - ball.radius);
+          const overlapX2 = (ball.x + ball.radius) - block.x;
+          const overlapY1 = (block.y + block.height) - (ball.y - ball.radius);
+          const overlapY2 = (ball.y + ball.radius) - block.y;
+          const minOverlapX = Math.min(overlapX1, overlapX2);
+          const minOverlapY = Math.min(overlapY1, overlapY2);
+
+          if (minOverlapX < minOverlapY) {
+            ball.dx = -ball.dx;
+          } else {
+            ball.dy = -ball.dy;
+          }
+          
+          if (blocks.length === 0) {
+            victory();
+          }
+          break; // Salir del bucle para evitar múltiples colisiones en un fotograma
+        }
+      }
+    }
+
+    function gameOver() {
+      gameState = 'gameOver';
+      document.getElementById('gameArea').style.display = 'none';
+      document.getElementById('gameOver').style.display = 'block';
+      document.getElementById('gameOverText').textContent = '¡Game Over!';
+      document.getElementById('finalScore').textContent = `Puntuación final: ${score}`;
+    }
+
+    function victory() {
+      gameState = 'victory';
+      document.getElementById('gameArea').style.display = 'none';
+      document.getElementById('gameOver').style.display = 'block';
+      document.getElementById('gameOverText').textContent = '¡Victoria!';
+      document.getElementById('finalScore').textContent = `Puntuación final: ${score}`;
+    }
+
+    // Control con mouse/táctil
+    canvas.addEventListener('mousemove', function(e) {
+      if (gameState === 'playing') {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, mouseX - paddle.width / 2));
+        touchControl = true;
+      }
+    });
+
+    canvas.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      if (gameState === 'playing') {
+        const rect = canvas.getBoundingClientRect();
+        const touchX = e.touches[0].clientX - rect.left;
+        paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, touchX - paddle.width / 2));
+        touchControl = true;
+      }
+    });
+
+    // Bucle del juego
+    function gameLoop() {
+      updateGame();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (videoElement && videoElement.readyState >= 3 && !touchControl) {
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(videoElement, -canvas.width, 0, canvas.width, canvas.height);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      if (!assetsLoaded) return;
+
+      if (gameState === 'playing' || gameState === 'gameOver' || gameState === 'victory') {
+        blocks.forEach(b => ctx.drawImage(blockImage, b.x, b.y, b.width, b.height));
+        ctx.drawImage(paddleImage, paddle.x, paddle.y, paddle.width, paddle.height);
+        ctx.drawImage(ballImage, ball.x - ball.radius, ball.y - ball.radius, ball.radius * 2, ball.radius * 2);
+
+        const fontScale = canvas.width / 800;
+        ctx.font = `${24 * fontScale}px Arial`;
+        ctx.fillStyle = "black";
+        ctx.textAlign = "left";
+        ctx.fillText(`Score: ${score}`, 10, canvas.height - (20 * fontScale));
+
+        const heartSize = 40 * fontScale;
+        for (let i = 0; i < lives; i++) {
+          ctx.drawImage(heartImage, canvas.width - (i + 1) * (heartSize + 5) - 10, canvas.height - heartSize - 10, heartSize, heartSize);
+        }
+      }
+
+      if (lastLandmarks) {
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.translate(-canvas.width, 0);
+        drawConnectors(ctx, lastLandmarks, HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 2 });
+        drawLandmarks(ctx, lastLandmarks, { color: '#FF0000', lineWidth: 1, radius: 3 });
+        ctx.restore();
+      }
+    }
+  </script>
+</body>
+</html>
